@@ -8,7 +8,7 @@
 # Modified By: iYuqinL
 # -----
 # Copyright © 2023 iYuqinL Holding Limited
-# 
+#
 # All shall be well and all shall be well and all manner of things shall be well.
 # Nope...we're doomed!
 # -----
@@ -19,7 +19,8 @@
 from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext
 import glob
-import sys, re
+import sys
+import re
 import setuptools
 import pybind11
 
@@ -27,50 +28,55 @@ import pybind11
 # (c) Sylvain Corlay, https://github.com/pybind/python_example
 def has_flag(compiler, flagname):
 
-  import tempfile
+    import tempfile
 
-  with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
+    with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
 
-    f.write('int main (int argc, char **argv) { return 0; }')
+        f.write('int main (int argc, char **argv) { return 0; }')
 
-    try:
-      compiler.compile([f.name], extra_postargs=[flagname])
-    except setuptools.distutils.errors.CompileError:
-      return False
+        try:
+            compiler.compile([f.name], extra_postargs=[flagname])
+        except setuptools.distutils.errors.CompileError:
+            return False
 
-  return True
+    return True
 
 
 # (c) Sylvain Corlay, https://github.com/pybind/python_example
 def cpp_flag(compiler):
+    flags = ["-O3"]
+    if has_flag(compiler, '-std=c++14'):
+        flags.append('-std=c++14')
+    elif has_flag(compiler, '-std=c++11'):
+        flags.append('-std=c++11')
+    else:
+        raise RuntimeError('Unsupported compiler: at least C++11 support is needed')
 
-  if   has_flag(compiler,'-std=c++14'): return '-std=c++14'
-  elif has_flag(compiler,'-std=c++11'): return '-std=c++11'
-  raise RuntimeError('Unsupported compiler: at least C++11 support is needed')
+    return flags
 
 
 # (c) Sylvain Corlay, https://github.com/pybind/python_example
 class BuildExt(build_ext):
 
-  c_opts = {
-    'msvc': ['/EHsc'],
-    'unix': [],
-  }
+    c_opts = {
+        'msvc': ['/EHsc'],
+        'unix': [],
+    }
 
-  if sys.platform == 'darwin':
-    c_opts['unix'] += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
+    if sys.platform == 'darwin':
+        c_opts['unix'] += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
 
-  def build_extensions(self):
-    ct = self.compiler.compiler_type
-    opts = self.c_opts.get(ct, [])
-    if ct == 'unix':
-      opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
-      opts.append(cpp_flag(self.compiler))
-    elif ct == 'msvc':
-      opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
-    for ext in self.extensions:
-      ext.extra_compile_args = opts
-    build_ext.build_extensions(self)
+    def build_extensions(self):
+        ct = self.compiler.compiler_type
+        opts = self.c_opts.get(ct, [])
+        if ct == 'unix':
+            opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
+            opts.extend(cpp_flag(self.compiler))
+        elif ct == 'msvc':
+            opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
+        for ext in self.extensions:
+            ext.extra_compile_args = opts
+        build_ext.build_extensions(self)
 
 
 src_dir = "facedet"
@@ -80,16 +86,16 @@ src_file = glob.glob(f"{src_dir}/facedet*.cc")
 
 
 ext_modules = [
-  Extension(
-    'pyfacedet',
-    src_file,
-    include_dirs=[
-      pybind11.get_include(False),
-      pybind11.get_include(True ),
-      inc_dir,
-    ],
-    language='c++'
-  ),
+    Extension(
+        'pyfacedet',
+        src_file,
+        include_dirs=[
+            pybind11.get_include(False),
+            pybind11.get_include(True),
+            inc_dir,
+        ],
+        language='c++'
+    ),
 ]
 
 # packages = ["."]
